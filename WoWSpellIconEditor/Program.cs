@@ -14,20 +14,25 @@ internal static class Program
     [STAThread]
     static void Main(string[] args)
     {
-        if (args.Length >= 2)
+        if (args.Length == 0)
         {
-            RunCli(args);
+            ApplicationConfiguration.Initialize();
+            Application.Run(new MainForm());
             return;
         }
 
-        ApplicationConfiguration.Initialize();
-        Application.Run(new MainForm());
+        RunCli(args);
     }
 
     private static void RunCli(string[] args)
     {
         try
         {
+            if (args.Length < 2)
+            {
+                throw new ArgumentException("Uso: <input> <output> [size]. Ejemplo: ./images ./Interface/ICONS 64");
+            }
+
             var inputPath = args[0];
             var outputPath = args[1];
             var size = args.Length >= 3 ? ParseSize(args[2]) : 64;
@@ -63,7 +68,9 @@ internal static class Program
                 foreach (var file in files)
                 {
                     var relativePath = Path.GetRelativePath(inputDir.FullName, file.FullName);
-                    var targetFile = Path.Combine(outputDir.FullName, Path.ChangeExtension(relativePath, ".blp"));
+                    var targetRelative = Path.ChangeExtension(relativePath, ".blp");
+                    var targetFile = Path.Combine(outputDir.FullName, targetRelative);
+
                     var targetDirectory = Path.GetDirectoryName(targetFile);
                     if (!string.IsNullOrEmpty(targetDirectory))
                     {
