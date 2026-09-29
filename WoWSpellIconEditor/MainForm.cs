@@ -10,9 +10,9 @@ public class MainForm : Form
     {
         Dock = DockStyle.Fill,
         BackColor = Color.FromArgb(20, 20, 24),
-        Margin = new Padding(12),
         BorderStyle = BorderStyle.FixedSingle,
-        SizeMode = PictureBoxSizeMode.Zoom
+        SizeMode = PictureBoxSizeMode.Zoom,
+        Margin = new Padding(12)
     };
 
     private readonly ComboBox sizeComboBox = new()
@@ -24,10 +24,10 @@ public class MainForm : Form
 
     private readonly Button importButton = new()
     {
-        Text = "Importar imagen",
-        Width = 170,
+        Text = "Importar",
+        Width = 150,
         Height = 38,
-        BackColor = Color.FromArgb(70, 122, 255),
+        BackColor = Color.FromArgb(70, 120, 255),
         ForeColor = Color.White,
         FlatStyle = FlatStyle.Flat,
         Font = new Font(FontFamily.GenericSansSerif, 11f, FontStyle.Bold)
@@ -38,7 +38,7 @@ public class MainForm : Form
         Text = "Exportar a BLP",
         Width = 170,
         Height = 38,
-        BackColor = Color.FromArgb(28, 152, 112),
+        BackColor = Color.FromArgb(34, 170, 120),
         ForeColor = Color.White,
         FlatStyle = FlatStyle.Flat,
         Font = new Font(FontFamily.GenericSansSerif, 11f, FontStyle.Bold),
@@ -56,12 +56,21 @@ public class MainForm : Form
         Font = new Font(FontFamily.GenericSansSerif, 11f, FontStyle.Bold)
     };
 
-    private readonly Label infoLabel = new()
+    private readonly CheckBox transparencyCheckBox = new()
+    {
+        Text = "Mostrar fondo transparente",
+        Checked = true,
+        AutoSize = true,
+        ForeColor = Color.White,
+        Font = new Font(FontFamily.GenericSansSerif, 10.5f)
+    };
+
+    private readonly Label statusLabel = new()
     {
         Text = "Sin imagen cargada",
         AutoSize = true,
         ForeColor = Color.White,
-        Font = new Font(FontFamily.GenericSansSerif, 11f)
+        Font = new Font(FontFamily.GenericSansSerif, 10.5f)
     };
 
     private Bitmap? sourceBitmap;
@@ -71,17 +80,19 @@ public class MainForm : Form
         Text = "WoW Spell Icon Editor";
         Width = 980;
         Height = 720;
-        MinimumSize = new Size(700, 500);
+        MinimumSize = new Size(760, 520);
         StartPosition = FormStartPosition.CenterScreen;
-        BackColor = Color.FromArgb(17, 17, 22);
+        BackColor = Color.FromArgb(20, 20, 24);
+        ForeColor = Color.White;
 
         importButton.Click += ImportButton_Click;
         exportButton.Click += ExportButton_Click;
         clearButton.Click += ClearButton_Click;
-        sizeComboBox.SelectedIndexChanged += (_, _) => UpdatePreview();
+        sizeComboBox.SelectedIndexChanged += (_, _) => RefreshPreview();
+        transparencyCheckBox.CheckedChanged += (_, _) => RefreshPreview();
 
-        sizeComboBox.Items.AddRange(new object[] { 16, 32, 40, 56, 64, 128, 256 });
-        sizeComboBox.SelectedIndex = 4;
+        sizeComboBox.Items.AddRange(new object[] { 16, 24, 32, 40, 48, 56, 64, 128, 256 });
+        sizeComboBox.SelectedIndex = 6;
 
         BuildLayout();
     }
@@ -92,75 +103,81 @@ public class MainForm : Form
         {
             Dock = DockStyle.Fill,
             Padding = new Padding(16),
-            BackColor = Color.FromArgb(17, 17, 22),
-            ColumnCount = 2,
-            RowCount = 2,
+            BackColor = Color.FromArgb(20, 20, 24),
+            ColumnCount = 1,
+            RowCount = 2
         };
 
-        root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-        root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 230F));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 70F));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 72F));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
-        var toolbar = new FlowLayoutPanel
+        var topBar = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Color.FromArgb(26, 26, 31),
+            Padding = new Padding(8),
+            ColumnCount = 4,
+            RowCount = 1
+        };
+
+        topBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150F));
+        topBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170F));
+        topBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160F));
+        topBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+
+        var buttonPanel = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents = false,
-            AutoSize = false,
-            Padding = new Padding(0),
-            BackColor = Color.FromArgb(17, 17, 22),
-            BorderStyle = BorderStyle.None
+            BackColor = Color.FromArgb(26, 26, 31),
+            Padding = new Padding(0)
         };
+        buttonPanel.Controls.Add(importButton);
+        buttonPanel.Controls.Add(exportButton);
+        buttonPanel.Controls.Add(clearButton);
 
-        toolbar.Controls.Add(importButton);
-        toolbar.Controls.Add(exportButton);
-        toolbar.Controls.Add(clearButton);
-
-        var sizePanel = new Panel
+        var sizePanel = new TableLayoutPanel
         {
-            Width = 170,
-            Height = 38,
-            BackColor = Color.FromArgb(17, 17, 22)
+            Dock = DockStyle.Fill,
+            BackColor = Color.FromArgb(26, 26, 31),
+            ColumnCount = 2,
+            RowCount = 1,
+            Padding = new Padding(0)
         };
+        sizePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        sizePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120F));
 
         var sizeLabel = new Label
         {
-            Text = "Tamaño del icono",
+            Text = "Tamaño",
             ForeColor = Color.White,
-            Font = new Font(FontFamily.GenericSansSerif, 10f),
+            Font = new Font(FontFamily.GenericSansSerif, 10.5f),
             AutoSize = true,
-            Location = new Point(0, 9)
+            Anchor = AnchorStyles.Left | AnchorStyles.Right,
+            TextAlign = ContentAlignment.MiddleLeft
         };
 
-        sizeComboBox.Location = new Point(0, 0);
-        sizePanel.Controls.Add(sizeLabel);
-        sizePanel.Controls.Add(sizeComboBox);
+        sizePanel.Controls.Add(sizeLabel, 0, 0);
+        sizePanel.Controls.Add(sizeComboBox, 1, 0);
 
-        var labelRow = new TableLayoutPanel
+        var checkPanel = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 1,
-            BackColor = Color.FromArgb(17, 17, 22),
-            Padding = new Padding(0),
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            BackColor = Color.FromArgb(26, 26, 31),
+            Padding = new Padding(0)
         };
+        checkPanel.Controls.Add(transparencyCheckBox);
 
-        labelRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-        labelRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170F));
+        topBar.Controls.Add(buttonPanel, 0, 0);
+        topBar.Controls.Add(sizePanel, 1, 0);
+        topBar.Controls.Add(checkPanel, 2, 0);
+        topBar.Controls.Add(statusLabel, 3, 0);
 
-        labelRow.Controls.Add(infoLabel, 0, 0);
-        labelRow.Controls.Add(sizePanel, 1, 0);
-
-        root.Controls.Add(toolbar, 0, 0);
-        root.Controls.Add(labelRow, 0, 0);
-
-        root.SetColumnSpan(toolbar, 2);
-        root.SetRowSpan(toolbar, 1);
-
+        root.Controls.Add(topBar, 0, 0);
         root.Controls.Add(previewBox, 0, 1);
-        root.SetColumnSpan(previewBox, 2);
-
         Controls.Add(root);
     }
 
@@ -168,8 +185,8 @@ public class MainForm : Form
     {
         using var dialog = new OpenFileDialog
         {
-            Filter = "Imágenes|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff",
-            Title = "Selecciona una imagen para convertir a icono"
+            Filter = "Imágenes compatibles|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff",
+            Title = "Selecciona una imagen para convertir en icono de WoW"
         };
 
         if (dialog.ShowDialog(this) != DialogResult.OK)
@@ -179,21 +196,21 @@ public class MainForm : Form
 
         try
         {
-            using var image = Image.FromFile(dialog.FileName);
-            sourceBitmap = new Bitmap(image);
+            using var loaded = Image.FromFile(dialog.FileName);
+            sourceBitmap = new Bitmap(loaded);
 
             if (sourceBitmap.Width <= 0 || sourceBitmap.Height <= 0)
             {
-                throw new InvalidOperationException("La imagen no tiene dimensiones válidas.");
+                throw new InvalidOperationException("La imagen no tiene tamaño válido.");
             }
 
             exportButton.Enabled = true;
-            UpdatePreview();
-            infoLabel.Text = $"Imagen cargada: {sourceBitmap.Width}x{sourceBitmap.Height}px";
+            RefreshPreview();
+            statusLabel.Text = $"Cargada: {sourceBitmap.Width}x{sourceBitmap.Height}px";
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"No se pudo cargar la imagen.\n\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, $"No se pudo abrir la imagen.\n\n{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -207,10 +224,10 @@ public class MainForm : Form
 
         using var dialog = new SaveFileDialog
         {
-            Filter = "WoW BLP|*.blp",
+            Filter = "Archivo WoW BLP|*.blp",
             DefaultExt = "blp",
             FileName = "spell_icon.blp",
-            Title = "Guardar icono en formato BLP"
+            Title = "Guardar icono exportado como BLP"
         };
 
         if (dialog.ShowDialog(this) != DialogResult.OK)
@@ -220,11 +237,11 @@ public class MainForm : Form
 
         try
         {
-            var exportSize = GetSelectedSize();
-            using var square = CreateSquareIcon(sourceBitmap, exportSize);
-            BlpWriter.WriteBlp(dialog.FileName, square);
+            var targetSize = GetSelectedSize();
+            using var icon = IconProcessor.CreateSquareIcon(sourceBitmap, targetSize, allowPadding: true);
+            BlpWriter.WriteBlp(dialog.FileName, icon);
 
-            infoLabel.Text = $"Archivo exportado: {dialog.FileName} ({exportSize}x{exportSize}px)";
+            statusLabel.Text = $"Exportado: {dialog.FileName} ({targetSize}x{targetSize}px)";
             MessageBox.Show(this, "El icono se exportó correctamente como BLP.", "Exportación completada", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
@@ -238,10 +255,10 @@ public class MainForm : Form
         sourceBitmap = null;
         previewBox.Image = null;
         exportButton.Enabled = false;
-        infoLabel.Text = "Sin imagen cargada";
+        statusLabel.Text = "Sin imagen cargada";
     }
 
-    private void UpdatePreview()
+    private void RefreshPreview()
     {
         if (sourceBitmap is null)
         {
@@ -250,100 +267,84 @@ public class MainForm : Form
         }
 
         var size = GetSelectedSize();
-        var square = CreateSquareIcon(sourceBitmap, size);
-        previewBox.Image = square;
+        using var icon = IconProcessor.CreateSquareIcon(sourceBitmap, size, allowPadding: true);
+        previewBox.Image = transparencyCheckBox.Checked ? CreateCheckerboardPreview(icon) : new Bitmap(icon);
+    }
+
+    private static Bitmap CreateCheckerboardPreview(Bitmap icon)
+    {
+        var canvas = new Bitmap(512, 512, PixelFormat.Format32bppArgb);
+        var cell = 16;
+
+        using var g = Graphics.FromImage(canvas);
+        g.Clear(Color.FromArgb(240, 240, 240));
+
+        for (var y = 0; y < canvas.Height; y += cell)
+        {
+            for (var x = 0; x < canvas.Width; x += cell)
+            {
+                var isDark = ((x / cell) + (y / cell)) % 2 == 0;
+                using var brush = new SolidBrush(isDark ? Color.FromArgb(230, 230, 230) : Color.FromArgb(180, 180, 180));
+                g.FillRectangle(brush, x, y, cell, cell);
+            }
+        }
+
+        var offsetX = (canvas.Width - icon.Width) / 2;
+        var offsetY = (canvas.Height - icon.Height) / 2;
+        g.DrawImage(icon, offsetX, offsetY, icon.Width, icon.Height);
+
+        return canvas;
     }
 
     private int GetSelectedSize()
     {
         return sizeComboBox.SelectedItem is int value ? value : 64;
     }
-
-    private static Bitmap CreateSquareIcon(Bitmap source, int size)
-    {
-        var output = new Bitmap(size, size, PixelFormat.Format32bppArgb);
-
-        using var g = Graphics.FromImage(output);
-        g.Clear(Color.Transparent);
-        g.CompositingMode = CompositingMode.SourceOver;
-        g.CompositingQuality = CompositingQuality.HighQuality;
-        g.SmoothingMode = SmoothingMode.HighQuality;
-        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-
-        var scale = Math.Min((float)size / source.Width, (float)size / source.Height);
-        var drawWidth = (int)Math.Round(source.Width * scale);
-        var drawHeight = (int)Math.Round(source.Height * scale);
-        var x = (size - drawWidth) / 2;
-        var y = (size - drawHeight) / 2;
-
-        var rect = new Rectangle(x, y, drawWidth, drawHeight);
-        g.DrawImage(source, rect);
-
-        return output;
-    }
 }
 
-public static class BlpWriter
+public static class IconProcessor
 {
-    public static void WriteBlp(string filePath, Bitmap image)
+    public static Bitmap CreateSquareIcon(Bitmap source, int size, bool allowPadding)
     {
-        const uint compression = 1;
-        const uint flags = 8;
-
-        var width = (uint)image.Width;
-        var height = (uint)image.Height;
-        var dataSize = width * height * 4U;
-
-        using var stream = File.Create(filePath);
-        using var writer = new BinaryWriter(stream);
-
-        writer.Write(Encoding.ASCII.GetBytes("BLP1"));
-        writer.Write(compression);
-        writer.Write(flags);
-        writer.Write(width);
-        writer.Write(height);
-        writer.Write(0U);
-        writer.Write(0U);
-
-        for (var i = 0; i < 16; i++)
+        if (size <= 0)
         {
-            writer.Write(i == 0 ? 156U : 0U);
+            throw new ArgumentOutOfRangeException(nameof(size), "El tamaño del icono debe ser mayor que 0.");
         }
 
-        for (var i = 0; i < 16; i++)
+        var output = new Bitmap(size, size, PixelFormat.Format32bppArgb);
+
+        using var graphics = Graphics.FromImage(output);
+        graphics.Clear(Color.Transparent);
+        graphics.CompositingMode = CompositingMode.SourceOver;
+        graphics.CompositingQuality = CompositingQuality.HighQuality;
+        graphics.SmoothingMode = SmoothingMode.HighQuality;
+        graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+        if (allowPadding)
         {
-            writer.Write(i == 0 ? dataSize : 0U);
+            var scale = Math.Min((float)size / source.Width, (float)size / source.Height);
+            var drawWidth = (int)Math.Round(source.Width * scale);
+            var drawHeight = (int)Math.Round(source.Height * scale);
+            var x = (size - drawWidth) / 2;
+            var y = (size - drawHeight) / 2;
+
+            graphics.DrawImage(source, new Rectangle(x, y, drawWidth, drawHeight));
+            return output;
         }
 
-        var rect = new Rectangle(0, 0, image.Width, image.Height);
-        var data = image.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        var cropRect = GetCenteredCropRectangle(source.Width, source.Height, size, size);
+        graphics.DrawImage(source, new Rectangle(0, 0, size, size), cropRect, GraphicsUnit.Pixel);
+        return output;
+    }
 
-        try
-        {
-            var bytes = new byte[data.Stride * data.Height];
-            Marshal.Copy(data.Scan0, bytes, 0, bytes.Length);
-
-            for (var y = 0; y < image.Height; y++)
-            {
-                for (var x = 0; x < image.Width; x++)
-                {
-                    var offset = (y * data.Stride) + (x * 4);
-                    var b = bytes[offset];
-                    var g = bytes[offset + 1];
-                    var r = bytes[offset + 2];
-                    var a = bytes[offset + 3];
-
-                    writer.Write(b);
-                    writer.Write(g);
-                    writer.Write(r);
-                    writer.Write(a);
-                }
-            }
-        }
-        finally
-        {
-            image.UnlockBits(data);
-        }
+    private static Rectangle GetCenteredCropRectangle(int srcWidth, int srcHeight, int targetWidth, int targetHeight)
+    {
+        var scale = Math.Max((float)targetWidth / srcWidth, (float)targetHeight / srcHeight);
+        var cropWidth = (int)Math.Round(targetWidth / scale);
+        var cropHeight = (int)Math.Round(targetHeight / scale);
+        var x = (srcWidth - cropWidth) / 2;
+        var y = (srcHeight - cropHeight) / 2;
+        return new Rectangle(x, y, cropWidth, cropHeight);
     }
 }
